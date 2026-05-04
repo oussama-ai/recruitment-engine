@@ -25,27 +25,32 @@ Frameworks: FastAPI (Backend), Streamlit (Frontend)
 📂 Directory StructurePlaintext/recruitment-engine
 
 ├── n8n/                # Workflows for scraping and DB sync
+
 ├── backend/            # FastAPI entry points and DB models
+
 ├── ai_engine/          # SBERT logic, NER, and PDF parsing
+
 ├── frontend/           # Streamlit UI (Upload & Dashboard)
+
 ├── scripts/            # Database initialization scripts
+
 └── requirements.txt    # Project dependencies
 
 🛠️ Installation & Setup
 
 1. Prerequisites
    
-Python 3.10+
-
-PostgreSQL 14+
-
-n8n (Self-hosted or Cloud)2.
+   Python 3.10+
+   
+   PostgreSQL 14+
+   
+   n8n (Self-hosted or Cloud)2.
 
 2. Install Dependencies
    
-pip install -r requirements.txt
+   pip install -r requirements.txt
 
-python -m spacy download fr_core_news_lg
+   python -m spacy download fr_core_news_lg
 
 3. Database Initialization
    
