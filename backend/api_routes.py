@@ -1,5 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text 
 from .database import SessionLocal
 from ai_engine.parser import extract_text_from_pdf
 from ai_engine.ner import extract_json_metadata
@@ -16,20 +17,34 @@ def get_db():
 
 @router.post("/recommend")
 async def recommend_jobs(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # # 1. Parse and Vectorize CV
+    # cv_bytes = await file.read()
+    # cv_text = extract_text_from_pdf(cv_bytes)
+    # cv_meta = extract_json_metadata(cv_text)
+    # cv_vec = embedder.encode(cv_text)
+
+    # # 2. Vector Search (Using pgvector <=> operator)
+    # query = f"""
+    #     SELECT id, title, company_name, metadata, 1 - (embedding <=> '{cv_vec}') AS sim
+    #     FROM jobs WHERE embedding IS NOT NULL
+    #     ORDER BY sim DESC LIMIT 10
+    # """
+    # raw_results = db.execute(query).fetchall()
     # 1. Parse and Vectorize CV
     cv_bytes = await file.read()
     cv_text = extract_text_from_pdf(cv_bytes)
     cv_meta = extract_json_metadata(cv_text)
-    cv_vec = embedder.encode(cv_text)
 
-    # 2. Vector Search (Using pgvector <=> operator)
-    query = f"""
-        SELECT id, title, company, metadata, 1 - (embedding <=> '{cv_vec}') AS sim
-        FROM jobs WHERE embedding IS NOT NULL
-        ORDER BY sim DESC LIMIT 10
-    """
+        # Conversion propre pour pgvector '[0.1, 0.2, ...]'
+    cv_vec_str = str(list(embedder.encode(cv_text))) 
+
+        # 2. Vector Search (Using pgvector <=> operator avec text())
+    query = text(f"""
+            SELECT id, title, company_name, metadata, 1 - (embedding <=> '{cv_vec_str}') AS sim
+            FROM jobs WHERE embedding IS NOT NULL
+            ORDER BY sim DESC LIMIT 10
+        """)
     raw_results = db.execute(query).fetchall()
-
     # 3. Hybrid Ranking
     recommendations = []
     for r in raw_results:

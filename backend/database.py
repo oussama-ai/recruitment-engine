@@ -17,6 +17,6 @@ class JobOffer(Base):
     __tablename__ = "jobs"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255))
-    company = Column(String(255))
+    company_name = Column('company_name', String)
     description = Column(Text)
-    metadata = Column(JSON)  # Stores the extracted skills/exp JSON
+    job_metadata = Column('metadata', JSON)

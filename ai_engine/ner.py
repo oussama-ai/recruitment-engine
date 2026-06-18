@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 import spacy
 from spacy.matcher import PhraseMatcher
 import re
@@ -69,4 +67,3 @@ def extract_json_metadata(text):
         "experience": years,
         "education": education_entries
     }
->>>>>>> Stashed changes

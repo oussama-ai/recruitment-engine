@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api_routes import router
+from backend.api_routes import router
 
 app = FastAPI(title="Recruitment Engine v1.0")
 app.include_router(router, prefix="/api")
