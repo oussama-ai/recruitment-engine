@@ -1,79 +1,153 @@
 import streamlit as st
 import requests
+import pandas as pd
 
-# 1. Page Configuration (Keep this at the very top)
+# 1. Configuration de la page (Toujours au sommet)
 st.set_page_config(
-    page_title="AI Job Matcher", 
-    page_icon="💼", 
-    layout="centered" # 'centered' often looks cleaner for focused forms
+    page_title="AI Recruitment Dashboard", 
+    page_icon="📊", 
+    layout="wide"  # Mode large pour une meilleure disposition des graphiques
 )
 
-# Optional: Add a little custom CSS to color the progress bar green
+# Style CSS personnalisé pour harmoniser les couleurs de l'interface
 st.markdown("""
     <style>
-    .stProgress > div > div > div > div { background-color: #4CAF50; }
+    .stProgress > div > div > div > div { background-color: #2ecc71; }
+    div[data-testid="stMetricValue"] { font-size: 28px; color: #1abc9c; }
+    .job-card { padding: 20px; border-radius: 10px; background-color: #f8f9fa; margin-bottom: 15px; }
     </style>""", unsafe_allow_html=True)
 
-# 2. Header Section
-st.title("💼 AI Recruitment Engine")
-st.markdown("Upload your CV to discover roles that perfectly match your skills and experience.")
+# 2. En-tête de l'application
+st.title("💼 AI Smart Recruitment Engine")
+st.markdown("Propulsez votre recherche de talents ou d'opportunités grâce à l'analyse sémantique et vectorielle.")
 st.divider()
 
-# 3. Input Section
-col1, col2 = st.columns([3, 1])
-with col1:
-    uploaded_file = st.file_uploader("Upload your CV (PDF format)", type=["pdf"])
-with col2:
-    # Adds a helpful professional tip next to the uploader
-    st.info("💡 **Tip:** Ensure your CV is up-to-date and clearly lists your technical skills for the best match.")
+# 3. Zone d'importation du CV
+col_input, col_tip = st.columns([3, 1])
+with col_input:
+    uploaded_file = st.file_uploader("Déposez votre CV au format PDF", type=["pdf"])
+with col_tip:
+    st.info("💡 **Analyse Locale :** Les compétences et les diplômes sont isolés de manière déterministe et respectueuse de la vie privée.")
 
-# 4. Action & Processing
+# 4. Traitement principal
 if uploaded_file is not None:
-    # Use a button to give the user control over when the API is called
-    if st.button("🔍 Analyze Profile & Find Matches", type="primary", use_container_width=True):
+    if st.button("🔍 Lancer l'Analyse du Profil & Matching", type="primary", use_container_width=True):
         
-        with st.spinner("Analyzing your profile and querying the database..."):
+        with st.spinner("Analyse sémantique du document et interrogation de l'index vectoriel..."):
             try:
-                # Actual API Call
-                files = {"file": uploaded_file.getvalue()}
-                response = requests.post("http://localhost:8000/api/recommend", files={"file": uploaded_file})
+                # Appel à l'API FastAPI locale
+                files = {"file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
+                response = requests.post("http://localhost:8000/api/recommend", files=files)
                 
                 if response.status_code == 200:
                     results = response.json()
                     
-                    st.success("Analysis complete! Here are your top matches:")
-                    st.markdown("<br>", unsafe_allow_html=True) # Adding a little breathing room
-                    
-                    # 5. Professional Results Display
-                    for index, res in enumerate(results):
-                        score_pct = int(res['score'] * 100)
+                    if not results:
+                        st.warning("⚠️ Aucun poste ne correspond de manière significative à ce profil pour le moment.")
+                    else:
+                        st.success("Analyse terminée avec succès !")
                         
-                        # Use a bordered container to create a "Card" effect
-                        with st.container(border=True):
-                            c1, c2 = st.columns([3, 1])
+                        # --- PRÉPARATION DES DONNÉES STATISTIQUES ---
+                        # Étape A : Calcul des scores de matching
+                        scores = [res['score'] for res in results]
+                        avg_score = sum(scores) / len(scores)
+                        max_score = max(scores)
+                        
+                        # Étape B : Agrégation des compétences matchées
+                        all_matched_skills = []
+                        for res in results:
+                            all_matched_skills.extend(res.get('matched_skills', []))
+                        
+                        # Comptage des fréquences pour identifier les compétences clés demandées
+                        skill_counts = pd.Series(all_matched_skills).value_counts().reset_index()
+                        skill_counts.columns = ['Compétence', 'Fréquence']
+                        
+                        # --- ARCHITECTURE DU DASHBOARD VIA LES TABS ---
+                        tab_analytics, tab_jobs = st.tabs(["📊 Statistiques & Insights Marché", "🎯 Offres d'Emploi Recommandées"])
+                        
+                        # =========================================================
+                        # TAB 1 : ANALYTICS & INSIGHTS
+                        # =========================================================
+                        with tab_analytics:
+                            st.subheader("📈 Vue d'Ensemble Analytique")
                             
-                            with c1:
-                                st.subheader(f"{res['title']}")
-                                st.markdown(f"🏢 **Company:** {res['company']}")
+                            # Ligne d'indicateurs de performance (KPI Metrics)
+                            m1, m2, m3 = st.columns(3)
+                            with m1:
+                                st.metric(label="Meilleur Match Détecté", value=f"{int(max_score * 100)} %")
+                            with m2:
+                                st.metric(label="Score de Match Moyen", value=f"{int(avg_score * 100)} %")
+                            with m3:
+                                st.metric(label="Total Postes Compatibles", value=f"{len(results)} Postes")
+                            
+                            st.divider()
+                            
+                            # Section Graphiques : Distribution et Demande Compétences
+                            g1, g2 = st.columns(2)
+                            
+                            with g1:
+                                st.markdown("### 🔝 Compétences Clés Valorisées")
+                                st.markdown("_Ces compétences présentes dans votre profil maximisent vos scores de matching avec les offres actuelles._")
+                                if not skill_counts.empty:
+                                    # Graphique à barres horizontal natif Streamlit
+                                    st.bar_chart(data=skill_counts.set_index('Compétence').head(8), use_container_width=True)
+                                else:
+                                    st.caption("Aucune donnée de compétence disponible.")
+                                    
+                            with g2:
+                                st.markdown("### 🎯 Distribution des Scores de Recommandation")
+                                st.markdown("_Aperçu de l'adéquation de votre profil vis-à-vis des exigences de notre base de données._")
+                                score_df = pd.DataFrame({"Scores": [s * 100 for s in scores]})
+                                # Graphique d'adéquation global
+                                st.area_chart(score_df, use_container_width=True)
                                 
-                                # Format skills as clean code-style badges
-                                skills_formatted = " ".join([f"`{skill}`" for skill in res['matched_skills']])
-                                st.markdown(f"**Matched Skills:** {skills_formatted}")
+                        # =========================================================
+                        # TAB 2 : RECOMMENDED JOBS
+                        # =========================================================
+                        MIN_SCORE_THRESHOLD = 0.70
+                        displayed_jobs = 0
+                        with tab_jobs:
+                            st.subheader("🎯 Recommandations de Postes Sur-Mesure")
+                            st.markdown("Ces rôles ont été extraits par proximité sémantique en fonction de vos compétences.")
+                            
+                            for index, res in enumerate(results):
+                                score_pct = int(res['score'] * 100)
                                 
-                            with c2:
-                                # Use Streamlit's native metric component for a dashboard feel
-                                st.metric(label="Match Score", value=f"{score_pct}%")
-                                st.progress(res['score'])
-                                
-                            # Optional: Use an expander to keep the UI clean but offer more depth
-                            with st.expander("View Details / Apply"):
-                                st.write("Job description summary and next steps can go here.")
-                                # Use a unique key for each button
-                                st.button("Apply Now", key=f"apply_{index}", type="secondary")
-                                
+                                # Création d'une carte visuelle pour chaque offre
+                                with st.container(border=True):
+                                    c1, c2 = st.columns([3, 1])
+                                    
+                                    with c1:
+                                        st.subheader(f"{res['title']}")
+                                        st.markdown(f"🏢 **Entreprise :** {res['company']}")
+                                        
+                                        # Badges de compétences stylisés sous forme de code inline
+                                        skills_formatted = " ".join([f"`{skill}`" for skill in res.get('matched_skills', [])])
+                                        st.markdown(f"**Compétences Validées :** {skills_formatted}")
+                                        
+                                    with c2:
+                                        # Widget métrique natif pour l'affichage de l'indice de confiance
+                                        st.metric(label="Adéquation", value=f"{score_pct}%")
+                                        st.progress(res['score'])
+                                        
+                                    # Zone d'expansion masquant le détail pour ne pas encombrer l'écran
+                                    with st.expander("📝 Consulter la description & Postuler"):
+                                        st.write(f"Ce poste chez {res['company']} correspond aux critères identifiés lors du parsing sémantique de votre dossier.")
+    
+                                        # Remplacement du st.button classique par un bouton de redirection web natif
+                                        st.link_button("👉 Postuler sur le site de l'entreprise", url=res['url'], type="secondary", use_container_width=True)
+                                if res['score'] < MIN_SCORE_THRESHOLD:
+                                    continue  # On ignore le poste s'il est en dessous du seuil
+        
+                                    displayed_jobs += 1
+                                    score_pct = int(res['score'] * 100)
+                                    # ... (le reste de ton code d'affichage de la carte de job)
+
+                            if displayed_jobs == 0:
+                                st.info("💡 Aucun poste ne correspond à votre profil avec un score supérieur à 70%.")
+                                        
                 else:
-                    st.error(f"⚠️ We encountered an issue (Status code: {response.status_code}). Please try again later.")
+                    st.error(f"⚠️ Erreur de communication avec le serveur backend (Code d'état : {response.status_code}).")
                     
-            except requests.exceptions.RequestException as e:
-                # Catch connection errors (e.g., if localhost:8000 isn't running)
-                st.error("🔌 Connection error. Please ensure the backend server is running.")
+            except requests.exceptions.RequestException:
+                st.error("🔌 Connexion réseau impossible. Veuillez vérifier que l'API FastAPI tourne correctement sur le port 8000.")

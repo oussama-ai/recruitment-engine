@@ -20,7 +20,7 @@ def run_cv_pipeline(pdf_stream):
     cleaned_text = clean_text(raw_text)
     print("\n[STEP 2: CLEANED TEXT]")
     print(cleaned_text[:500] + "...") # Print first 500 characters
-    metadata = ner_parser.extract_json_metadata(cleaned_text)
+    metadata = ner_parser.extract_json_metadata(cleaned_text, is_job_description=False)
     print("\n[STEP 3: EXTRACTED METADATA]")
     return metadata
 
