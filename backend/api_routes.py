@@ -171,7 +171,7 @@ async def recommend_jobs(file: UploadFile = File(...), db: Session = Depends(get
                 job_meta = {}
 
             # Calcul du score hybride
-            h_score = compute_hybrid_score(sim_score, cv_meta, job_meta)
+            h_score, missing_skills = compute_hybrid_score(sim_score, cv_meta, job_meta)
 
             # --- NORMALISATION DES SKILLS DU CV ---
             cv_skills = [str(s).strip().lower() for s in cv_meta.get('skills', [])]
@@ -205,7 +205,8 @@ async def recommend_jobs(file: UploadFile = File(...), db: Session = Depends(get
                 "company": r[2],
                 "url": job_url,
                 "score": h_score,
-                "matched_skills": matched_skills
+                "matched_skills": matched_skills,
+                "missing_skills": missing_skills
             })
 
         return sorted(recommendations, key=lambda x: x['score'], reverse=True)
